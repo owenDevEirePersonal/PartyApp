@@ -561,16 +561,15 @@ public class DriverActivity extends FragmentActivity implements DownloadCallback
                 @Override
                 public void callBack(int inNumberOfDrinksOrdered, OrderView callingOrder)
                 {
-                    //Remove the UID from the list of current order UIDs
-                    currentOrderUIDs.remove(getPatronIndexFromUID(callingOrder.getAttachedUID()));
-
                     //Adjust balance and drinks count if sufficent funds in balance to afford the order.
                     if (inNumberOfDrinksOrdered * 5.00f <= savedBalance.get(getPatronIndexFromUID(callingOrder.getAttachedUID())))
                     {
                         addBalance(-5.00f * inNumberOfDrinksOrdered, getPatronIndexFromUID(callingOrder.getAttachedUID()));
                         addToDrinksCount(callingOrder.getAttachedUID(), inNumberOfDrinksOrdered);
                     }
-                    //OrderView.DismissButton.onclicklistener removes itself from the view(see OrderView.dismissButton.onClickListener)
+
+                    //Remove the UID from the list of current order UIDs
+                    deleteExisitingOrder(callingOrder.getAttachedUID());
                 }
             });
             newOrder.setAddAnotherObserver(new OrderAddAnotherObserver()
@@ -658,8 +657,10 @@ public class DriverActivity extends FragmentActivity implements DownloadCallback
         int i = 0;
         for (String aUID: currentOrderUIDs)
         {
+            Log.i("Setup Order", "Deleting Order, checking for preexisiting order: " + aUID);
             if(inUID.matches(aUID))
             {
+                Log.i("Setup Order", "Deleting Order: " + inUID);
                 ((ViewManager)currentOrderViews.get(i).getParent()).removeView((View) currentOrderViews.get(i));
                 currentOrderViews.remove(i);
                 currentOrderUIDs.remove(i);
@@ -667,10 +668,25 @@ public class DriverActivity extends FragmentActivity implements DownloadCallback
             }
             i++;
         }
+        Log.i("Setup Order", "Not Deleting Order " + inUID + " as order does not already exist");
         return false;
     }
 
     private int getPatronIndexFromUID(String inUID)
+    {
+        int i = 0;
+        for (String aUID: savedIDs)
+        {
+            if(inUID.matches(aUID))
+            {
+                return i;
+            }
+            i++;
+        }
+        return -1; //returns -1 if UID not found to match any, stored in shared preferences.
+    }
+
+    private int getOrderIndexFromUID(String inUID)
     {
         int i = 0;
         for (String aUID: currentOrderUIDs)

@@ -102,7 +102,7 @@ public class OrderView extends ConstraintLayout
                 {
                     dismissObserver.callBack(numberOfDrinksOrdered, aOrderView);
                 }
-                ((ViewManager)rootView.getParent().getParent()).removeView((View) rootView.getParent());
+                //((ViewManager)rootView.getParent().getParent()).removeView((View) rootView.getParent());
             }
         });
 
