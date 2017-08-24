@@ -1,6 +1,5 @@
 package com.deveire.dev.partyapp;
 
-
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -50,7 +49,6 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
-import com.google.android.gms.location.*;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -72,16 +70,16 @@ import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class DriverActivity extends FragmentActivity implements GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks, LocationListener, DownloadCallback<String>
+public class DriverActivity extends FragmentActivity implements DownloadCallback<String>
 {
 
     private GoogleMap mMap;
 
     private TextView mapText;
-    private TextView balanceText;
+    //private TextView balanceText;
     private TableLayout ordersTable;
     private ImageView adImageView;
-    private Button setupButton;
+
 
     final static int PAIR_READER_REQUESTCODE = 9;
 
@@ -101,7 +99,7 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
     private ArrayList<String> savedDrinks;
     private ArrayList<String> savedIDs;
     private ArrayList<Integer> savedDrinksCount;
-    private float savedBalance;
+    private ArrayList<Float> savedBalance;
 
     private ArrayList<String> currentOrderUIDs;
     private ArrayList<OrderView> currentOrderViews;
@@ -194,16 +192,6 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
     //[/Scanner Variables]
 
     //[Network and periodic location update, Variables]
-    private GoogleApiClient mGoogleApiClient;
-    private Location locationReceivedFromLocationUpdates;
-    private Location userLocation;
-    private DriverActivity.AddressResultReceiver geoCoderServiceResultReciever;
-    private int locationScanInterval;
-
-    LocationRequest request;
-    private final int SETTINGS_REQUEST_ID = 8888;
-    private final String SAVED_LOCATION_KEY = "79";
-
     private boolean pingingServer;
     private final String serverIPAddress = "http://192.168.1.188:8080/InstructaConServlet/ICServlet";
     //private final String serverIPAddress = "http://api.eirpin.com/api/TTServlet";
@@ -222,31 +210,9 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
 
 
         mapText = (TextView) findViewById(R.id.mapText);
-        balanceText = (TextView) findViewById(R.id.balanceText);
+        //balanceText = (TextView) findViewById(R.id.balanceText);
         ordersTable = (TableLayout) findViewById(R.id.ordersTable);
-        setupButton = (Button) findViewById(R.id.setupButton);
-        setupButton.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View v)
-            {
-                //if scanner is connected, disconnect it
-                if(deviceManager.isConnection())
-                {
-                    Log.i("Scanner Buggery", "DriverActivity cutting connection prior to launching setupactivity.");
-                    stopAllScans = true;
-                    deviceManager.requestDisConnectDevice();
-                }
 
-                if(mScanner.isScanning())
-                {
-                    Log.i("Scanner Buggery", "DriverActivity cutting scanner prior to launching setupactivity.");
-                    mScanner.stopScan();
-                }
-                Intent i = new Intent(getApplicationContext(), SetupPatronActivity.class);
-                startActivity(i);
-            }
-        });
 
 
         /*scanKegButton.setOnClickListener(new View.OnClickListener()
@@ -278,10 +244,6 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
 
         hasState = true;
 
-        userLocation = new Location("Truck");
-        userLocation.setLatitude(0);
-        userLocation.setLongitude(0);
-
         itemID =  0;
 
         savedTotal = 0;
@@ -289,7 +251,7 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
         savedDrinks = new ArrayList<String>();
         savedIDs = new ArrayList<String>();
         savedDrinksCount = new ArrayList<Integer>();
-        savedBalance = 0.00f;
+        savedBalance = new ArrayList<Float>();
 
         savedData = this.getApplicationContext().getSharedPreferences("Drinks-On-Me SavedData", Context.MODE_PRIVATE);
         savedTotal = savedData.getInt("savedTotal", 0);
@@ -299,9 +261,10 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
             savedDrinks.add(savedData.getString("patronDrinks" + i, "Error"));
             savedIDs.add(savedData.getString("patronIDs" + i, "Error"));
             savedDrinksCount.add(savedData.getInt("patronDrinksCount" + i, 0));
+            savedBalance.add(savedData.getFloat("savedBalance" + i, 0.00f));
         }
-        savedBalance = savedData.getFloat("savedBalance", 0.00f);
-        balanceText.setText("Balance: " + savedBalance);
+
+        //balanceText.setText("Balance: " + savedBalance);
 
         currentOrderViews = new ArrayList<OrderView>();
         currentOrderUIDs = new ArrayList<String>();
@@ -311,65 +274,6 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
         //aNetworkFragment = NetworkFragment.getInstance(getSupportFragmentManager(), "https://192.168.1.188:8080/smrttrackerserver-1.0.0-SNAPSHOT/hello?isDoomed=yes");
         serverURL = serverIPAddress + "?request=storelocation" + Settings.Secure.ANDROID_ID.toString() + "&name=" + "&lat=" + 0000 + "&lon=" + 0000;
 
-
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();
-
-        mGoogleApiClient.connect();
-
-        locationScanInterval = 60;//in seconds
-
-
-        request = new LocationRequest();
-        request.setInterval(locationScanInterval * 1000);//in mileseconds
-        request.setFastestInterval(5000);//caps how fast the locations are recieved, as other apps could be triggering updates faster than our app.
-        request.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY); //accurate to 100 meters.
-
-        LocationSettingsRequest.Builder requestBuilder = new LocationSettingsRequest.Builder().addLocationRequest(request);
-
-        PendingResult<LocationSettingsResult> result =
-                LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient,
-                        requestBuilder.build());
-
-        result.setResultCallback(new ResultCallback<LocationSettingsResult>()
-        {
-            @Override
-            public void onResult(@NonNull LocationSettingsResult aResult)
-            {
-                final Status status = aResult.getStatus();
-                final LocationSettingsStates states = aResult.getLocationSettingsStates();
-                switch (status.getStatusCode())
-                {
-                    case LocationSettingsStatusCodes.SUCCESS:
-                        // All location settings are satisfied. The client can
-                        // initialize location requests here.
-
-                        break;
-                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                        // Location settings are not satisfied, but this can be fixed
-                        // by showing the user a dialog.
-                        try
-                        {
-                            // Show the dialog by calling startResolutionForResult(),
-                            // and check the result in onActivityResult().
-                            status.startResolutionForResult(DriverActivity.this, SETTINGS_REQUEST_ID);
-                        } catch (IntentSender.SendIntentException e)
-                        {
-                            // Ignore the error.
-                        }
-                        break;
-                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                        // Location settings are not satisfied. However, we have no way
-                        // to fix the settings so we won't show the dialog.
-                        break;
-                }
-            }
-        });
-
-        geoCoderServiceResultReciever = new AddressResultReceiver(new Handler());
 
 
         pingingServerFor_alertData = false;
@@ -490,19 +394,20 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
                     Log.i("Setup Patron", "Loading patronIDs" + i + ": " + savedIDs.get(i));
                     savedDrinksCount.add(savedData.getInt("patronDrinksCount" + i, 0));
                     Log.i("Setup Patron", "Loading patronDrinksCount" + i + ": " + savedDrinksCount.get(i));
+                    savedBalance.add(savedData.getFloat("savedBalance" + i, 0.00f));
+                    Log.i("Setup Patron", "Loading patronBalance" + i + ": " + savedDrinksCount.get(i));
                 }
-                savedBalance = savedData.getFloat("savedBalance", 0.00f);
+
                 runOnUiThread(new Runnable()
                 {
                     @Override
                     public void run()
                     {
-                        balanceText.setText("Balance: " + savedBalance);
+                        //balanceText.setText("Balance: " + savedBalance);
                     }
                 });
 
 
-                Log.i("Setup Patron", "Loading savedBalance: " + savedBalance);
             }
         }, 1000);
 
@@ -557,8 +462,9 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
             edit.putString("patronDrinks" + i, savedDrinks.get(i));
             edit.putString("patronIDs" + i, savedIDs.get(i));
             edit.putInt("patronDrinksCount" + i, savedDrinksCount.get(i));
+            edit.putFloat("savedBalance" + i, savedBalance.get(i));
         }
-        edit.putFloat("savedBalance", savedBalance);
+
         edit.commit();
 
 
@@ -618,8 +524,9 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
             edit.putString("patronDrinks" + i, savedDrinks.get(i));
             edit.putString("patronIDs" + i, savedIDs.get(i));
             edit.putInt("patronDrinksCount" + i, savedDrinksCount.get(i));
+            edit.putFloat("savedBalance" + i, savedBalance.get(i));
         }
-        edit.putFloat("savedBalance", savedBalance);
+
         edit.commit();
 
 
@@ -650,16 +557,20 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
             //when the barman hits the dismiss button, indicating he has served/ignored the order
             newOrder.setDismissObserver(new OrderDismissObserver()
             {
+                //Called be OrderView.dismissButton.onClickListener
                 @Override
-                public void callBack(int inNumberOfDrinksOrdered)
+                public void callBack(int inNumberOfDrinksOrdered, OrderView callingOrder)
                 {
-                    //Called be OrderView.dismissButton.onClickListener
-                    if (inNumberOfDrinksOrdered * 5.00f <= savedBalance)
+                    //Remove the UID from the list of current order UIDs
+                    currentOrderUIDs.remove(getPatronIndexFromUID(callingOrder.getAttachedUID()));
+
+                    //Adjust balance and drinks count if sufficent funds in balance to afford the order.
+                    if (inNumberOfDrinksOrdered * 5.00f <= savedBalance.get(getPatronIndexFromUID(callingOrder.getAttachedUID())))
                     {
-                        addBalance(-5.00f * inNumberOfDrinksOrdered);
-                        addToDrinksCount(currentUID, inNumberOfDrinksOrdered);
+                        addBalance(-5.00f * inNumberOfDrinksOrdered, getPatronIndexFromUID(callingOrder.getAttachedUID()));
+                        addToDrinksCount(callingOrder.getAttachedUID(), inNumberOfDrinksOrdered);
                     }
-                    //onclicklistener removes itself from the view(see OrderView.dismissButton.onClickListener)
+                    //OrderView.DismissButton.onclicklistener removes itself from the view(see OrderView.dismissButton.onClickListener)
                 }
             });
             newOrder.setAddAnotherObserver(new OrderAddAnotherObserver()
@@ -668,7 +579,7 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
                 public void callBack(int inNumberOfDrinksOrdered, OrderView callingOrder)
                 {
                     //called by OrderView.addAnotherButton.onClickListner
-                    if (inNumberOfDrinksOrdered * 5.00f > savedBalance)
+                    if (inNumberOfDrinksOrdered * 5.00f > savedBalance.get(getPatronIndexFromUID(callingOrder.getAttachedUID())))
                     {
                         callingOrder.setPreferedDrinkText("Insufficent Funds");
                     }
@@ -696,13 +607,13 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
         {
             if(aUID.matches(inUID))
             {
-                if(savedBalance >= 5f)
+                if(savedBalance.get(i) >= 5f)
                 {
-                    anOrder.setOrder(savedNames.get(i), savedDrinks.get(i), savedDrinksCount.get(i));
+                    anOrder.setOrder(savedNames.get(i), savedDrinks.get(i), savedDrinksCount.get(i), savedBalance.get(i), currentUID);
                 }
                 else
                 {
-                    anOrder.setOrder(savedNames.get(i), "Out of Money", savedDrinksCount.get(i));
+                    anOrder.setOrder(savedNames.get(i), "Out of Money", savedDrinksCount.get(i), savedBalance.get(i), currentUID);
                 }
                 matchFound = true;
             }
@@ -711,16 +622,17 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
         //If UID matches no registered user.
         if(!matchFound)
         {
-            anOrder.setOrder("Unregistered", "Hasn't Paid", 0);
+            anOrder.setOrder("Unregistered", "Hasn't Paid", 0, 0, currentUID);
+            anOrder.setPreferedDrinkText("Hasn't Paid"); //manually setting text to "Hasn't Paid" removes the 1 that is attached to that text by default
         }
         return anOrder;
     }
 
     //called by OrderView's dismissButton onClickListener
-    public void addBalance(float cashToAdd)
+    public void addBalance(float cashToAdd, int i)
     {
-        savedBalance += cashToAdd;
-        balanceText.setText("Balance: " + savedBalance);
+        savedBalance.set(i, savedBalance.get(i) + cashToAdd);
+        //balanceText.setText("Balance: " + savedBalance);
     }
 
     private void addToDrinksCount(String inUID, int inDrinksOrdered)
@@ -733,7 +645,7 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
                 savedDrinksCount.set(i, savedDrinksCount.get(i) + inDrinksOrdered);
                 SharedPreferences.Editor edit = savedData.edit();
                 edit.putInt("patronDrinksCount" + i, savedDrinksCount.get(i));
-                edit.putFloat("savedBalance", savedBalance);
+                edit.putFloat("savedBalance" + i, savedBalance.get(i));
                 edit.commit();
                 break;
             }
@@ -758,6 +670,19 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
         return false;
     }
 
+    private int getPatronIndexFromUID(String inUID)
+    {
+        int i = 0;
+        for (String aUID: currentOrderUIDs)
+        {
+            if(inUID.matches(aUID))
+            {
+                return i;
+            }
+            i++;
+        }
+        return -1; //returns -1 if UID not found to match any, stored in shared preferences.
+    }
 
     private void updateSavedDataForUID(String inUID)
     {
@@ -776,7 +701,7 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
         edit.putString("patronDrinks" + i, savedDrinks.get(i));
         edit.putString("patronIDs" + i, savedIDs.get(i));
         edit.putInt("patronDrinksCount" + i, savedDrinksCount.get(i));
-        edit.putFloat("savedBalance", savedBalance);
+        edit.putFloat("savedBalance" + i, savedBalance.get(i));
         edit.commit();
     }
 
@@ -797,21 +722,6 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
         }
     }
 
-    private void scanKeg(String kegIDin)
-    {
-        if(!kegIDin.matches(""))
-        {
-            kegIDin = kegIDin.replace(' ', '_');
-            serverURL = serverIPAddress + "?request=storekeg" + "&id=" + itemID + "&kegid=" + kegIDin + "&lat=" + locationReceivedFromLocationUpdates.getLatitude() + "&lon=" + locationReceivedFromLocationUpdates.getLongitude();
-            //lat and long are doubles, will cause issue? nope
-            Log.i("Network Update", "Attempting to start download from scanKeg. " + serverURL);
-            aNetworkFragment = NetworkFragment.getInstance(getSupportFragmentManager(), serverURL);
-        }
-        else
-        {
-            Log.e("kegScan Error", "invalid uuid entered.");
-        }
-    }
 
     /*public boolean onKeyUp(int keyCode, KeyEvent event)
     {
@@ -1608,66 +1518,15 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
 
 
 
-    //**********[Location Update and server pinging Code]
-    @Override
-    public void onConnectionFailed(ConnectionResult result) {
-        // An unresolvable error has occurred and a connection to Google APIs
-        // could not be established. Display an error message, or handle
-        // the failure silently
-
-        // ...
-    }
-
-    @Override
-    public void onConnected(@Nullable Bundle bundle)
-    {
-        if(ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
-        {
-            locationReceivedFromLocationUpdates = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, request, this);
-            if(locationReceivedFromLocationUpdates != null)
-            {
-                //YES, lat and long are multi digit.
-                if(Geocoder.isPresent())
-                {
-                    startIntentService();
-                }
-                else
-                {
-                    Log.e("ERROR:", "Geocoder is not avaiable");
-                }
-            }
-            else
-            {
-
-            }
-
-
-        }
+//**********[Location Update and server pinging Code]
 
 
 
-    }
-
-    @Override
-    public void onConnectionSuspended(int i)
-    {
-        //put other stuff here
-    }
-
-    //update app based on the new location data, and then begin pinging servlet with the new location
-    @Override
-    public void onLocationChanged(Location location)
-    {
-
-
-    }
 
 
     @Override
     public void onSaveInstanceState(Bundle savedState)
     {
-        savedState.putParcelable(SAVED_LOCATION_KEY, locationReceivedFromLocationUpdates);
         super.onSaveInstanceState(savedState);
     }
 
@@ -1676,23 +1535,8 @@ public class DriverActivity extends FragmentActivity implements GoogleApiClient.
         if (savedInstanceState != null)
         {
 
-            // Update the value of mCurrentLocation from the Bundle and update the
-            // UI to show the correct latitude and longitude.
-            if (savedInstanceState.keySet().contains(SAVED_LOCATION_KEY))
-            {
-                // Since LOCATION_KEY was found in the Bundle, we can be sure that
-                // mCurrentLocationis not null.
-                locationReceivedFromLocationUpdates = savedInstanceState.getParcelable(SAVED_LOCATION_KEY);
-            }
 
         }
-    }
-
-    protected void startIntentService() {
-        Intent intent = new Intent(this, geoCoderIntent.class);
-        intent.putExtra(Constants.RECEIVER, geoCoderServiceResultReciever);
-        intent.putExtra(Constants.LOCATION_DATA_EXTRA, locationReceivedFromLocationUpdates);
-        startService(intent);
     }
 
     //Update activity based on the results sent back by the servlet.

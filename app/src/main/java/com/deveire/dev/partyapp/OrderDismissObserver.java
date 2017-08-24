@@ -6,6 +6,6 @@ package com.deveire.dev.partyapp;
 
 public interface OrderDismissObserver
 {
-    void callBack(int inNumberOfDrinksOrdered);
+    void callBack(int inNumberOfDrinksOrdered, OrderView callingOrder);
 }
 
