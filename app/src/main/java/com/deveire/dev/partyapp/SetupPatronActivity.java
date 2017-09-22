@@ -145,9 +145,13 @@ public class SetupPatronActivity extends AppCompatActivity
             @Override
             public void onClick(View v)
             {
-                currentBalance += 30.0f;
-                patronBalanceText.setText("Balance: " + currentBalance + "€");
-                savedBalance.set(getPatronIndexFromUID(currentUID), currentBalance);
+                //if card is registered
+                if(getPatronIndexFromUID(currentUID) != -1)
+                {
+                    currentBalance += 30.0f;
+                    patronBalanceText.setText("Balance: " + currentBalance + "€");
+                    savedBalance.set(getPatronIndexFromUID(currentUID), currentBalance);
+                }
             }
         });
 
@@ -992,6 +996,17 @@ public class SetupPatronActivity extends AppCompatActivity
         catch (IllegalStateException e)
         {
             Log.e("TileScanner", "Timer has been canceled, aborting the call for uid loop");
+
+            if(deviceManager.isConnection())
+            {
+                stopAllScans = true;
+                deviceManager.requestDisConnectDevice();
+            }
+
+            if(mScanner.isScanning())
+            {
+                mScanner.stopScan();
+            }
         }
     }
 

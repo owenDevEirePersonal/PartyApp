@@ -32,18 +32,22 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key"/>
 
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity"
+                  android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
         </activity>
         <activity
             android:name=".DriverActivity"
-            android:label="@string/title_activity_driver">
+            android:label="OrdersActivity"
+            android:screenOrientation="portrait">
         </activity>
-        <activity android:name=".SetupPatronActivity">
+        <activity android:name=".SetupPatronActivity"
+                  android:screenOrientation="portrait">
         </activity>
     </application>
 

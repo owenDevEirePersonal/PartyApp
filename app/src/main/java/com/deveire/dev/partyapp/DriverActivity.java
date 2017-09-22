@@ -1506,6 +1506,17 @@ public class DriverActivity extends FragmentActivity implements DownloadCallback
         catch (IllegalStateException e)
         {
             Log.e("TileScanner", "Timer has been canceled, aborting the call for uid loop due to illegal state exception: " + e);
+
+            if(deviceManager.isConnection())
+            {
+                stopAllScans = true;
+                deviceManager.requestDisConnectDevice();
+            }
+
+            if(mScanner.isScanning())
+            {
+                mScanner.stopScan();
+            }
         }
     }
 
