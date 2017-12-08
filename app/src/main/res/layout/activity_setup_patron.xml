@@ -32,12 +32,12 @@
         android:text="Add Cash"
         android:textColor="@color/cast_expanded_controller_text_color"
         app:layout_constraintBottom_toBottomOf="@+id/balanceText"
-        app:layout_constraintHorizontal_bias="0.101"
+        app:layout_constraintHorizontal_bias="0.2"
         app:layout_constraintLeft_toRightOf="@+id/balanceText"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="@+id/balanceText"
-        app:layout_constraintVertical_bias="0.489"
-        tools:layout_editor_absoluteY="208dp"/>
+        app:layout_constraintVertical_bias="0.488"
+        />
 
     <Button
         android:id="@+id/cancelButton"
@@ -78,6 +78,32 @@
         app:layout_constraintLeft_toLeftOf="@+id/nameEditText"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/nameEditText"/>
+
+    <EditText
+        android:id="@+id/dropoffEditText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="0dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginTop="16dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:textColor="@color/cast_expanded_controller_text_color"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintLeft_toLeftOf="@+id/nameEditText"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/addBalanceButton"/>
+
+    <TextView
+        android:id="@+id/dropoffTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="16dp"
+        android:text="Drop-off Point"
+        android:textColor="@color/cast_expanded_controller_text_color"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/dropoffEditText"/>
 
     <TextView
         android:id="@+id/textView2"
@@ -144,5 +170,17 @@
         android:textColor="@color/cast_expanded_controller_text_color"
         app:layout_constraintLeft_toLeftOf="@+id/drinkEditText"
         app:layout_constraintTop_toTopOf="@+id/idTextView"/>
+
+    <CheckBox
+        android:id="@+id/participateCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="16dp"
+        android:text="Participate in Contests"
+        android:textColor="@android:color/white"
+        app:buttonTint="@android:color/white"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dropoffEditText"/>
 
 </android.support.constraint.ConstraintLayout>

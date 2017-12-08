@@ -9,9 +9,11 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.BoringLayout;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -42,6 +44,8 @@ public class SetupPatronActivity extends AppCompatActivity
     private ArrayList<String> savedIDs;
     private ArrayList<Integer> savedDrinksCount;
     private ArrayList<Float> savedBalance;
+    private ArrayList<String> savedDropOff;
+    private ArrayList<Boolean> savedParticipate;
 
     private String currentUID;
     private float currentBalance;
@@ -51,6 +55,8 @@ public class SetupPatronActivity extends AppCompatActivity
     private TextView patronDrinksCountText;
     private EditText preferedDrinksEditText;
     private EditText patronNameEditText;
+    private EditText dropoffEditText;
+    private CheckBox participateCheckbox;
     private Button cancelButton;
     private Button okButton;
     private Button addBalanceButton;
@@ -97,6 +103,8 @@ public class SetupPatronActivity extends AppCompatActivity
         savedIDs = new ArrayList<String>();
         savedDrinksCount = new ArrayList<Integer>();
         savedBalance = new ArrayList<Float>();
+        savedDropOff = new ArrayList<String>();
+        savedParticipate = new ArrayList<Boolean>();
 
         savedData = this.getApplicationContext().getSharedPreferences("Drinks-On-Me SavedData", Context.MODE_PRIVATE);
         savedTotal = savedData.getInt("savedTotal", 0);
@@ -107,6 +115,8 @@ public class SetupPatronActivity extends AppCompatActivity
             savedIDs.add(savedData.getString("patronIDs" + i, "Error"));
             savedDrinksCount.add(savedData.getInt("patronDrinksCount" + i, 0));
             savedBalance.add(savedData.getFloat("savedBalance" + i, 0.00f));
+            savedDropOff.add(savedData.getString("patronDropOff" + i, "Error"));
+            savedParticipate.add(savedData.getBoolean("patronParticipate" + i, false));
         }
 
 
@@ -120,6 +130,8 @@ public class SetupPatronActivity extends AppCompatActivity
         cancelButton = (Button) findViewById(R.id.cancelButton);
         okButton = (Button) findViewById(R.id.okButton);
         addBalanceButton = (Button) findViewById(R.id.addBalanceButton);
+        dropoffEditText = (EditText) findViewById(R.id.dropoffEditText);
+        participateCheckbox = (CheckBox) findViewById(R.id.participateCheckBox);
 
         cancelButton.setOnClickListener(new View.OnClickListener()
         {
@@ -227,6 +239,10 @@ public class SetupPatronActivity extends AppCompatActivity
             Log.i("Setup Patron", "Saving savedDrinksCount" + i + ": " + savedDrinksCount.get(i));
             Log.i("Setup Patron", "Saving savedBalance" + i + ": " + savedBalance.get(i));
             edit.putFloat("savedBalance" + i, savedBalance.get(i));
+            edit.putString("patronDropOff" + i, savedDropOff.get(i));
+            Log.i("Setup Patron", "Saving savedDropOff" + i + ": " + savedDropOff.get(i));
+            edit.putBoolean("patronParticipate" + i, savedParticipate.get(i));
+            Log.i("Setup Patron", "Saving savedParticipate" + i + ": " + savedParticipate.get(i));
         }
 
         saveLastUsedDetails(edit);
@@ -255,6 +271,8 @@ public class SetupPatronActivity extends AppCompatActivity
                     savedNames.set(i, patronNameEditText.getText().toString());
                     savedDrinks.set(i, preferedDrinksEditText.getText().toString());
                     savedDrinksCount.set(i, 0);
+                    savedDropOff.set(i, dropoffEditText.getText().toString());
+                    savedParticipate.set(i, participateCheckbox.isChecked());
 
                     matchFound = true;
                     break;
@@ -269,6 +287,8 @@ public class SetupPatronActivity extends AppCompatActivity
                 savedNames.add(patronNameEditText.getText().toString());
                 savedDrinks.add(preferedDrinksEditText.getText().toString());
                 savedIDs.add(scannedCardUIDText.getText().toString());
+                savedDropOff.add(dropoffEditText.getText().toString());
+                savedParticipate.add(participateCheckbox.isChecked());
                 savedDrinksCount.add(0);
                 savedBalance.add(30.0f);
             }
@@ -286,6 +306,9 @@ public class SetupPatronActivity extends AppCompatActivity
         patronDrinksCountText.setText("Drinks Consumed: " + savedData.getInt("patronDrinksCount" +getPatronIndexFromUID(scannedCardUIDText.getText().toString()), 0));
         patronBalanceText.setText("Balance: " + savedData.getFloat("savedBalance" + getPatronIndexFromUID(scannedCardUIDText.getText().toString()), 0.00f) + "€");
         currentBalance = savedData.getFloat("savedBalance" + getPatronIndexFromUID(scannedCardUIDText.getText().toString()), 0.00f);
+
+        dropoffEditText.setText(savedData.getString("lastUsedDropOffLocation", "Error"));
+        participateCheckbox.setChecked(savedData.getBoolean("lastUsedParticipate", false));
     }
 
     private void saveLastUsedDetails(SharedPreferences.Editor edit)
@@ -293,6 +316,8 @@ public class SetupPatronActivity extends AppCompatActivity
         edit.putString("lastUsedPatronName", patronNameEditText.getText().toString());
         edit.putString("lastUsedPatronDrinks", preferedDrinksEditText.getText().toString());
         edit.putString("lastUsedPatronIDs", scannedCardUIDText.getText().toString());
+        edit.putString("lastUsedDropOffLocation", dropoffEditText.getText().toString());
+        edit.putBoolean("lastUsedParticipate", participateCheckbox.isChecked());
     }
 
     private int getPatronIndexFromUID(String inUID)
@@ -455,6 +480,8 @@ public class SetupPatronActivity extends AppCompatActivity
                             patronDrinksCountText.setText("Drinks Consumed: " + savedDrinksCount.get(j));
                             currentBalance = savedData.getFloat("savedBalance" + getPatronIndexFromUID(currentUID), 0.00f);
                             patronBalanceText.setText("Balance: " + currentBalance + "€");
+                            dropoffEditText.setText(savedDropOff.get(j));
+                            participateCheckbox.setChecked(savedParticipate.get(j));
                         }
                         else
                         {
@@ -463,6 +490,8 @@ public class SetupPatronActivity extends AppCompatActivity
                             patronDrinksCountText.setText("Drinks Consumed: 0");
                             currentBalance = 0.00f;
                             patronBalanceText.setText("Balance: " + currentBalance + "€");
+                            dropoffEditText.setText("-Enter Prefered Dropoff point-");
+                            participateCheckbox.setChecked(false);
                         }
                     }
                 });
